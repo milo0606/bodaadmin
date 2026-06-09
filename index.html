@@ -71,7 +71,7 @@
           const [selectedIds, setSelectedIds] = useState([]);
           const [isProcessingBatch, setIsProcessingBatch] = useState(false);
           const [searchTerm, setSearchTerm] = useState('');
-          const [colConfirmado, setColConfirmado] = useState(null);
+          const [colEnviado, setColEnviado] = useState(null);
           
           const messageTemplate = 'Hola {Nombre},\n\nEstamos muy felices de compartir esta noticia con ustedes. 💍💖 Después de mucho amor, risas y sueños juntos 🌟, ha llegado el momento de dar el siguiente paso. \n\nNos encantaría que nos acompañaran en este día tan especial. 🥂✨ Aquí les enviamos nuestra invitación digital y esperamos celebrar juntos. ❤️\n\n💌 Ver invitación: {URL}\n\nCon mucho cariño,\n\nMiguel & Azalia 💕';
 
@@ -84,9 +84,9 @@
               const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
               let nombreIdx = headers.findIndex(h => h.includes('nombre'));
               let numeroIdx = headers.findIndex(h => h.includes('numero') || h.includes('número') || h.includes('tel'));
-              let confirmadoIdx = headers.findIndex(h => h.includes('confirmado'));
+              let EnviadoIdx = headers.findIndex(h => h.includes('Enviado'));
               
-              if (confirmadoIdx !== -1) setColConfirmado(confirmadoIdx + 1);
+              if (EnviadoIdx !== -1) setColEnviado(EnviadoIdx + 1);
               
               const parsedData = [];
               for (let i = 1; i < lines.length; i++) {
@@ -98,7 +98,7 @@
                       numero: row[numeroIdx] || '', 
                       invi: '1 persona', 
                       status: 'Pendiente',
-                      confirmado: confirmadoIdx !== -1 && row[confirmadoIdx] ? row[confirmadoIdx] : ''
+                      Enviado: EnviadoIdx !== -1 && row[EnviadoIdx] ? row[EnviadoIdx] : ''
                   });
                 }
               }
@@ -146,10 +146,10 @@
               });
               
               if (response.ok) {
-                if (googleAppsScriptUrl.startsWith('http') && colConfirmado) {
+                if (googleAppsScriptUrl.startsWith('http') && colEnviado) {
                   const rowToUpdate = item.id + 1; 
                   try {
-                    await fetch(`${googleAppsScriptUrl}?row=${rowToUpdate}&col=${colConfirmado}&value=Sí`, { 
+                    await fetch(`${googleAppsScriptUrl}?row=${rowToUpdate}&col=${colEnviado}&value=Sí`, { 
                       method: 'GET', 
                       mode: 'no-cors' 
                     });
@@ -174,7 +174,7 @@
                 const success = await sendWhatsApp(updatedData[itemIdx]);
                 updatedData[itemIdx].status = success ? 'Entregado' : 'No entregado';
                 if (success) {
-                    updatedData[itemIdx].confirmado = 'Sí';
+                    updatedData[itemIdx].Enviado = 'Sí';
                 }
               }
             }
@@ -225,7 +225,7 @@
                         <th className="p-4">Teléfono</th>
                         <th className="p-4">Tipo Invitación</th>
                         <th className="p-4">Status</th>
-                        <th className="p-4">Confirmado</th>
+                        <th className="p-4">Enviado</th>
                         <th className="p-4">Ws</th>
                       </tr>
                     </thead>
@@ -245,7 +245,7 @@
                           </td>
                           <td className="p-4 text-sm font-medium">{item.status}</td>
                           <td className="p-4">
-                            {item.confirmado && item.confirmado.toLowerCase().includes('s') ? (
+                            {item.Enviado && item.Enviado.toLowerCase().includes('s') ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
                                 <IconCheckCircle className="h-3 w-3" /> Sí
                               </span>
@@ -260,7 +260,7 @@
                                     setData(data.map(d => d.id === item.id ? {
                                         ...d, 
                                         status: success ? 'Entregado' : 'No entregado',
-                                        confirmado: success ? 'Sí' : d.confirmado
+                                        Enviado: success ? 'Sí' : d.Enviado
                                     } : d));
                                 }} 
                                 className="p-2 hover:bg-slate-100 rounded-lg"
