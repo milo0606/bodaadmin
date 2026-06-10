@@ -71,7 +71,7 @@
           const [selectedIds, setSelectedIds] = useState([]);
           const [isProcessingBatch, setIsProcessingBatch] = useState(false);
           const [searchTerm, setSearchTerm] = useState('');
-          const [colEnviado, setColEnviado] = useState(null);
+          const [colConfirmado, setColConfirmado] = useState(null);
           
           const messageTemplate = 'Hola {Nombre},\n\nEstamos muy felices de compartir esta noticia con ustedes. 💍💖 Después de mucho amor, risas y sueños juntos 🌟, ha llegado el momento de dar el siguiente paso. \n\nNos encantaría que nos acompañaran en este día tan especial. 🥂✨ Aquí les enviamos nuestra invitación digital y esperamos celebrar juntos. ❤️\n\n💌 Ver invitación: {URL}\n\nCon mucho cariño,\n\nMiguel & Azalia 💕';
 
@@ -84,9 +84,9 @@
               const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
               let nombreIdx = headers.findIndex(h => h.includes('nombre'));
               let numeroIdx = headers.findIndex(h => h.includes('numero') || h.includes('número') || h.includes('tel'));
-              let EnviadoIdx = headers.findIndex(h => h.includes('Enviado'));
+              let confirmadoIdx = headers.findIndex(h => h.includes('confirmado'));
               
-              if (EnviadoIdx !== -1) setColEnviado(EnviadoIdx + 1);
+              if (confirmadoIdx !== -1) setColConfirmado(confirmadoIdx + 1);
               
               const parsedData = [];
               for (let i = 1; i < lines.length; i++) {
@@ -98,7 +98,7 @@
                       numero: row[numeroIdx] || '', 
                       invi: '1 persona', 
                       status: 'Pendiente',
-                      Enviado: EnviadoIdx !== -1 && row[EnviadoIdx] ? row[EnviadoIdx] : ''
+                      confirmado: confirmadoIdx !== -1 && row[confirmadoIdx] ? row[confirmadoIdx] : ''
                   });
                 }
               }
@@ -135,7 +135,7 @@
             if (cleanNumber.length === 10) cleanNumber = '1' + cleanNumber;
             else if (cleanNumber.startsWith('001')) cleanNumber = cleanNumber.substring(2);
             
-            const url = `https://7107.api.greenapi.com/waInstance7107646879/sendMessage/f27e28d2fee74f7190a382e9e403baf77f07a474d1cf4a5f9c`;
+            const url = `https://7107.api.greenapi.com/waInstance7107646919/sendMessage/8ec931b7b199457195010339e5f197706a67ccc34ae84b76ab`;
             const text = messageTemplate.replace(/\{Nombre\}/gi, item.nombre).replace(/\{URL\}/gi, getInvitationUrl(item.invi));
 
             try {
@@ -146,10 +146,10 @@
               });
               
               if (response.ok) {
-                if (googleAppsScriptUrl.startsWith('http') && colEnviado) {
+                if (googleAppsScriptUrl.startsWith('http') && colConfirmado) {
                   const rowToUpdate = item.id + 1; 
                   try {
-                    await fetch(`${googleAppsScriptUrl}?row=${rowToUpdate}&col=${colEnviado}&value=Sí`, { 
+                    await fetch(`${googleAppsScriptUrl}?row=${rowToUpdate}&col=${colConfirmado}&value=Sí`, { 
                       method: 'GET', 
                       mode: 'no-cors' 
                     });
@@ -174,7 +174,7 @@
                 const success = await sendWhatsApp(updatedData[itemIdx]);
                 updatedData[itemIdx].status = success ? 'Entregado' : 'No entregado';
                 if (success) {
-                    updatedData[itemIdx].Enviado = 'Sí';
+                    updatedData[itemIdx].confirmado = 'Sí';
                 }
               }
             }
@@ -199,7 +199,7 @@
                       <input 
                         type="text" 
                         placeholder="Buscar..." 
-                        className="pl-10 pr-4 py-2 border rounded-xl w-64 text-sm"
+                        className="pl-10 pr-4 py-2 border rounded-xl w-64 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
@@ -208,71 +208,97 @@
                     <button 
                       onClick={sendBatch}
                       disabled={isProcessingBatch || selectedIds.length === 0}
-                      className="bg-[#25D366] text-white px-6 py-2 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50"
+                      className="bg-[#25D366] text-white px-6 py-2 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50 hover:bg-[#20b858] transition-colors"
                     >
                       {isProcessingBatch ? <IconLoader className="animate-spin h-4 w-4" /> : <IconSend className="h-4 w-4" />}
-                      Enviar {selectedIds.length} seleccionados
+                      Enviar {selectedIds.length > 0 ? selectedIds.length : ''}
                     </button>
                   </div>
                 </header>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b">
-                      <tr>
-                        <th className="p-4"><button onClick={toggleSelectAll}>{selectedIds.length === filteredData.length && filteredData.length > 0 ? <IconCheckSquare className="text-blue-600"/> : <IconSquare/>}</button></th>
-                        <th className="p-4">Nombre</th>
-                        <th className="p-4">Teléfono</th>
-                        <th className="p-4">Tipo Invitación</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Enviado</th>
-                        <th className="p-4">Ws</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredData.map(item => (
-                        <tr key={item.id} className="border-b hover:bg-slate-50">
-                          <td className="p-4"><button onClick={() => toggleSelect(item.id)}>{selectedIds.includes(item.id) ? <IconCheckSquare className="text-blue-600"/> : <IconSquare/>}</button></td>
-                          <td className="p-4 font-medium">{item.nombre}</td>
-                          <td className="p-4 text-slate-600">{item.numero}</td>
-                          <td className="p-4">
-                            <select className="border rounded-lg p-2 text-sm" value={item.invi} onChange={(e) => updateStatus(item.id, e.target.value)}>
-                              <option>1 persona</option>
-                              <option>2 personas</option>
-                              <option>3 personas</option>
-                              <option>4 personas</option>
-                            </select>
-                          </td>
-                          <td className="p-4 text-sm font-medium">{item.status}</td>
-                          <td className="p-4">
-                            {item.Enviado && item.Enviado.toLowerCase().includes('s') ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                                <IconCheckCircle className="h-3 w-3" /> Sí
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-sm">-</span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <button 
-                                onClick={async () => {
-                                    const success = await sendWhatsApp(item);
-                                    setData(data.map(d => d.id === item.id ? {
-                                        ...d, 
-                                        status: success ? 'Entregado' : 'No entregado',
-                                        Enviado: success ? 'Sí' : d.Enviado
-                                    } : d));
-                                }} 
-                                className="p-2 hover:bg-slate-100 rounded-lg"
-                                title="Enviar mensaje"
-                            >
-                                <IconSend className="h-4 w-4 text-slate-600" />
-                            </button>
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-slate-50 border-b">
+                        <tr>
+                          <th className="p-4 w-12"><button onClick={toggleSelectAll} className="flex items-center justify-center">{selectedIds.length === filteredData.length && filteredData.length > 0 ? <IconCheckSquare className="text-emerald-600"/> : <IconSquare className="text-slate-400" />}</button></th>
+                          <th className="p-4 text-sm font-semibold text-slate-600">Nombre</th>
+                          <th className="p-4 text-sm font-semibold text-slate-600">Teléfono</th>
+                          <th className="p-4 text-sm font-semibold text-slate-600">Tipo Invitación</th>
+                          <th className="p-4 text-sm font-semibold text-slate-600">Status</th>
+                          <th className="p-4 text-sm font-semibold text-slate-600">Confirmado</th>
+                          <th className="p-4 text-sm font-semibold text-slate-600 text-center">Ws</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {filteredData.length === 0 && !loading && (
+                           <tr>
+                              <td colSpan="7" className="p-8 text-center text-slate-500">No se encontraron invitados.</td>
+                           </tr>
+                        )}
+                        {loading && (
+                           <tr>
+                              <td colSpan="7" className="p-8 text-center text-slate-500 flex justify-center items-center gap-2">
+                                <IconLoader className="animate-spin h-5 w-5" /> Cargando invitados...
+                              </td>
+                           </tr>
+                        )}
+                        {filteredData.map(item => (
+                          <tr key={item.id} className="border-b hover:bg-slate-50 transition-colors">
+                            <td className="p-4">
+                              <button onClick={() => toggleSelect(item.id)} className="flex items-center justify-center">
+                                {selectedIds.includes(item.id) ? <IconCheckSquare className="text-emerald-600"/> : <IconSquare className="text-slate-400" />}
+                              </button>
+                            </td>
+                            <td className="p-4 font-medium text-slate-800">{item.nombre}</td>
+                            <td className="p-4 text-slate-600 text-sm">{item.numero}</td>
+                            <td className="p-4">
+                              <select 
+                                className="border border-slate-200 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                                value={item.invi} 
+                                onChange={(e) => updateStatus(item.id, e.target.value)}
+                              >
+                                <option>1 persona</option>
+                                <option>2 personas</option>
+                                <option>3 personas</option>
+                                <option>4 personas</option>
+                              </select>
+                            </td>
+                            <td className="p-4 text-sm">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'Entregado' ? 'bg-emerald-100 text-emerald-700' : item.status === 'No entregado' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              {item.confirmado && item.confirmado.toLowerCase().includes('s') ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+                                  <IconCheckCircle className="h-3 w-3" /> Sí
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-sm pl-4">-</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-center">
+                              <button 
+                                  onClick={async () => {
+                                      const success = await sendWhatsApp(item);
+                                      setData(data.map(d => d.id === item.id ? {
+                                          ...d, 
+                                          status: success ? 'Entregado' : 'No entregado',
+                                          confirmado: success ? 'Sí' : d.confirmado
+                                      } : d));
+                                  }} 
+                                  className="p-2 hover:bg-emerald-50 rounded-lg transition-colors group mx-auto flex"
+                                  title="Enviar mensaje"
+                              >
+                                  <IconSend className="h-5 w-5 text-[#25D366] group-hover:scale-110 transition-transform" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
